@@ -9,6 +9,7 @@ import { dirname } from 'path';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import { BufferMemory } from "langchain/memory";
 import { ChatMessageHistory } from "langchain/stores/message/in_memory";
+import { AgentService } from "./agentService.js";
 
 dotenv.config();
 const sessionMemories = {};
@@ -92,10 +93,23 @@ function retrieveRelevantContent(query) {
     .map(item => item.chunk);
 }
 
+const agentService = new AgentService();
+
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
   const useRAG = req.body.useRAG === undefined ? true : req.body.useRAG;
   const sessionId = req.body.sessionId || "default";
+
+  const mode = req.body.mode || "basic";
+
+  // If agent mode is selected, route to agent service
+  if (mode === "agent") {
+    const agentResponse = await agentService.processMessage(sessionId, userMessage);
+    return res.json({
+      reply: agentResponse.reply,
+      sources: []
+    });
+  }
 
   let sources = [];
 
